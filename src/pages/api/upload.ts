@@ -16,20 +16,31 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    const filesDir = path.join(process.cwd(), 'files')
+    const filesDir = path.resolve(process.cwd(), 'files')
+    console.log(`Files directory: ${filesDir}`)
     
     if (!fs.existsSync(filesDir)) {
       fs.mkdirSync(filesDir, { recursive: true })
+      console.log(`Created files directory: ${filesDir}`)
     }
+
+    const MAX_FILE_SIZE = 10 * 1024 * 1024
 
     return new Promise((resolve, reject) => {
       const bb = busboy({ headers: req.headers as Record<string, string> })
+      let receivedSize = 0
       
       bb.on('file', (name, file, info) => {
         const { filename } = info
         const chunks: Buffer[] = []
         
         file.on('data', (data) => {
+          receivedSize += data.length
+          if (receivedSize > MAX_FILE_SIZE) {
+            file.destroy()
+            resolve(res.status(413).json({ error: 'File too large (max 10MB)' }))
+            return
+          }
           chunks.push(data)
         })
         
@@ -49,6 +60,7 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
 
           const filePath = path.join(filesDir, savedFilename)
           fs.writeFileSync(filePath, fileData)
+          console.log(`File saved: ${filePath}, size: ${fileData.length} bytes`)
 
           const protocol = req.headers['x-forwarded-proto'] || 'http'
           const host = req.headers.host || 'localhost:3000'
@@ -59,7 +71,8 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
             filename: savedFilename,
             originalFilename: filename,
             url: fileUrl,
-            message: 'File uploaded successfully'
+            message: 'File uploaded successfully',
+            filePath: filePath
           }))
         })
       })

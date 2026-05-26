@@ -1,6 +1,20 @@
 import fs from 'fs'
 import path from 'path'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
+}
+
 export async function POST(request: Request) {
   try {
     const filesDir =
@@ -18,7 +32,10 @@ export async function POST(request: Request) {
     if (!file) {
       return new Response(JSON.stringify({ error: 'No file found in request' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       })
     }
 
@@ -26,7 +43,10 @@ export async function POST(request: Request) {
     if (fileBuffer.length > MAX_FILE_SIZE) {
       return new Response(JSON.stringify({ error: 'File too large (max 10MB)' }), {
         status: 413,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       })
     }
 
@@ -35,7 +55,10 @@ export async function POST(request: Request) {
     if (invalidChars.test(fileName) || fileName.includes('..')) {
       return new Response(JSON.stringify({ error: 'Invalid filename' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       })
     }
 
@@ -56,14 +79,20 @@ export async function POST(request: Request) {
       }),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       }
     )
   } catch (error) {
     console.error('Upload error:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
     })
   }
 }

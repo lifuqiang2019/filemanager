@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -62,7 +63,15 @@ export async function POST(request: Request) {
       })
     }
 
-    const safeFileName = fileName.replace(/\//g, '_')
+    const ext = path.extname(fileName)
+    const baseName = path.basename(fileName, ext).replace(/\//g, '_')
+    const hash = crypto
+      .createHash('md5')
+      .update(fileBuffer)
+      .update(Date.now().toString())
+      .digest('hex')
+      .slice(0, 8)
+    const safeFileName = `${baseName}_${hash}${ext}`
     const filePath = path.join(filesDir, safeFileName)
     fs.writeFileSync(filePath, fileBuffer)
     fs.chmodSync(filePath, 0o644)

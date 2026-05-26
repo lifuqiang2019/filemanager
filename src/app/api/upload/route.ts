@@ -2,6 +2,16 @@ import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    }
+  })
+}
+
 export async function POST(request: Request) {
   try {
     const filesDir = process.env.FILES_DIR || '/home/u330586698/domains/file.aoobooc.me/files'
@@ -61,7 +71,15 @@ export async function POST(request: Request) {
       url: fileUrl,
       message: 'File uploaded successfully',
       filePath: filePath
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }), { 
+      status: 200, 
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      } 
+    })
     
   } catch (error) {
     console.error('Upload error:', error)

@@ -53,9 +53,12 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
             return
           }
 
-          const ext = path.extname(filename)
+          const ext = path.extname(filename).toLowerCase()
           const hash = crypto.createHash('md5').update(fileData).digest('hex').substring(0, 8)
-          const basename = path.basename(filename, ext)
+          let basename = path.basename(filename, ext)
+          if (basename.endsWith(ext)) {
+            basename = basename.slice(0, -ext.length)
+          }
           const savedFilename = `${basename}_${hash}${ext}`
 
           const filePath = path.join(filesDir, savedFilename)

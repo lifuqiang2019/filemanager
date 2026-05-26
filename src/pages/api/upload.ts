@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
 
 export const config = {
   api: {
@@ -81,20 +82,30 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
       const filenameMatch = header.match(/filename="([^"]+)"/)
       if (!filenameMatch) continue
 
-      let filename = filenameMatch[1]
-      if (!filename) {
-        filename = `file_${Date.now()}.bin`
+      let originalFilename = filenameMatch[1]
+      if (!originalFilename) {
+        originalFilename = `file_${Date.now()}.bin`
       }
 
       const invalidChars = /[<>:"/\\|?*\0]/
-      if (invalidChars.test(filename) || filename.includes('..')) {
+      if (invalidChars.test(originalFilename) || originalFilename.includes('..')) {
         return res.status(400).json({ error: 'Invalid filename' })
       }
 
-      const cleanBody = body.slice(0, -2)
+      const ext = path.extname(originalFilename)
+      const hash = crypto.createHash('md5').update(body).digest('hex').substring(0, 8)
+      const basename = path.basename(originalFilename, ext)
+      const filename = `${basename}_${hash}${ext}`
+
+      let cleanBody = body
+      const endIndex = cleanBody.lastIndexOf('\r\n--')
+      if (endIndex !== -1) {
+        cleanBody = cleanBody.slice(0, endIndex)
+      }
 
       const filePath = path.join(filesDir, filename)
       fs.writeFileSync(filePath, cleanBody)
+      console.log(`File saved: ${filePath}, size: ${cleanBody.length} bytes`)
 
       const protocol = req.headers['x-forwarded-proto'] || 'http'
       const host = req.headers.host || 'localhost:3000'
@@ -103,6 +114,7 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(200).json({
         success: true,
         filename,
+        originalFilename,
         url: fileUrl,
         message: 'File uploaded successfully'
       })

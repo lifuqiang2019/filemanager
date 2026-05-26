@@ -4,7 +4,7 @@ import crypto from 'crypto'
 
 export async function POST(request: Request) {
   try {
-    const filesDir = path.resolve(process.cwd(), 'files')
+    const filesDir = process.env.FILES_DIR || path.resolve(path.dirname(process.cwd()), 'files')
     console.log(`Files directory: ${filesDir}`)
     
     if (!fs.existsSync(filesDir)) {

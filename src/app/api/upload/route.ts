@@ -1,88 +1,37 @@
-import fs from 'fs'
-import path from 'path'
-import crypto from 'crypto'
-
-export async function OPTIONS() {
-  return new Response(null, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    }
-  })
-}
-
 export async function POST(request: Request) {
   try {
-    const filesDir = process.env.FILES_DIR || '/home/u330586698/domains/file.aoobooc.me/files'
-    console.log(`Files directory: ${filesDir}`)
-    
-    if (!fs.existsSync(filesDir)) {
-      fs.mkdirSync(filesDir, { recursive: true })
-      console.log(`Created files directory: ${filesDir}`)
-    }
+    const incomingFormData = await request.formData()
+    const file = incomingFormData.get('file')
 
-    const MAX_FILE_SIZE = 10 * 1024 * 1024
-
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
-    
     if (!file) {
-      return new Response(JSON.stringify({ error: 'No file found in request' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'No file found in request' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
-    const fileBuffer = Buffer.from(await file.arrayBuffer())
-    
-    if (fileBuffer.length > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({ error: 'File too large (max 10MB)' }), { status: 413 })
-    }
+    const formData = new FormData()
+    formData.append('file', file)
 
-    const filename = file.name
-    
-    const invalidChars = /[<>:"/\\|?*\0]/
-    if (invalidChars.test(filename) || filename.includes('..')) {
-      return new Response(JSON.stringify({ error: 'Invalid filename' }), { status: 400 })
-    }
-
-    const ext = path.extname(filename).toLowerCase()
-    const hash = crypto.createHash('md5').update(fileBuffer).digest('hex').substring(0, 8)
-    let basename = path.basename(filename, ext)
-    if (basename.endsWith(ext)) {
-      basename = basename.slice(0, -ext.length)
-    }
-    const savedFilename = `${basename}_${hash}${ext}`
-
-    const filePath = path.join(filesDir, savedFilename)
-    fs.writeFileSync(filePath, fileBuffer)
-    fs.chmodSync(filePath, 0o644) // 设置文件权限
-    console.log(`[UPLOAD] File saved: ${filePath}, size: ${fileBuffer.length} bytes`)
-    console.log(`[UPLOAD] Saved filename: "${savedFilename}"`)
-    console.log(`[UPLOAD] Directory contents after save:`, fs.readdirSync(filesDir))
-
-    const headers = Object.fromEntries(request.headers)
-    const protocol = headers['x-forwarded-proto'] || 'http'
-    const host = headers.host || 'localhost:3000'
-    const fileUrl = `${protocol}://${host}/api/files/${encodeURIComponent(savedFilename)}`
-
-    return new Response(JSON.stringify({
-      success: true,
-      filename: savedFilename,
-      originalFilename: filename,
-      url: fileUrl,
-      message: 'File uploaded successfully',
-      filePath: filePath
-    }), { 
-      status: 200, 
-      headers: { 
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
-      } 
+    const upstreamResponse = await fetch('https://fileshow.lengyuer.autos/api/external/upload', {
+      method: 'POST',
+      headers: {
+        'x-api-key': process.env.UPLOAD_API_KEY || 'ak_j8xr9qecnjvfwwao',
+      },
+      body: formData,
     })
-    
+
+    const data = await upstreamResponse.json()
+
+    return new Response(JSON.stringify(data), {
+      status: upstreamResponse.status,
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (error) {
-    console.error('Upload error:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
+    console.error('Upload proxy error:', error)
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

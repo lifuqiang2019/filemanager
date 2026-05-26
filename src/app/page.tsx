@@ -30,11 +30,8 @@ export default function Home() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch('https://fileshow.lengyuer.autos/api/external/upload', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
-        headers: {
-          'x-api-key': 'ak_j8xr9qecnjvfwwao',
-        },
         body: formData,
       })
 

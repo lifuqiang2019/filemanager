@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 
+const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']
+
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; message: string; url?: string } | null>(null)
+  const [result, setResult] = useState<{ success: boolean; message: string; url?: string; filename?: string } | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -40,6 +42,7 @@ export default function Home() {
           success: true,
           message: data.message,
           url: data.url,
+          filename: data.filename,
         })
       } else {
         setResult({ success: false, message: data.error || '上传失败' })
@@ -49,6 +52,11 @@ export default function Home() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const isImage = (filename: string) => {
+    const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'))
+    return IMAGE_EXTENSIONS.includes(ext)
   }
 
   return (
@@ -76,6 +84,13 @@ export default function Home() {
               <a href={result.url} target="_blank" rel="noopener noreferrer">
                 {result.url}
               </a>
+            </div>
+          )}
+          {result.url && result.filename && isImage(result.filename) && (
+            <div className="image-preview">
+              <strong>图片预览:</strong>
+              <br />
+              <img src={result.url} alt="Preview" className="preview-image" />
             </div>
           )}
         </div>

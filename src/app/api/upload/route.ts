@@ -1,20 +1,9 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import busboy from 'busboy'
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
-const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
+export async function POST(request: Request) {
   try {
     const filesDir = path.resolve(process.cwd(), 'files')
     console.log(`Files directory: ${filesDir}`)
@@ -25,9 +14,10 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     const MAX_FILE_SIZE = 10 * 1024 * 1024
+    const headers = Object.fromEntries(request.headers) as Record<string, string>
 
-    return new Promise((resolve, reject) => {
-      const bb = busboy({ headers: req.headers as Record<string, string> })
+    return new Promise<Response>((resolve, reject) => {
+      const bb = busboy({ headers })
       let receivedSize = 0
       
       bb.on('file', (name, file, info) => {
@@ -38,7 +28,7 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
           receivedSize += data.length
           if (receivedSize > MAX_FILE_SIZE) {
             file.destroy()
-            resolve(res.status(413).json({ error: 'File too large (max 10MB)' }))
+            resolve(new Response(JSON.stringify({ error: 'File too large (max 10MB)' }), { status: 413 }))
             return
           }
           chunks.push(data)
@@ -49,7 +39,7 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
           
           const invalidChars = /[<>:"/\\|?*\0]/
           if (invalidChars.test(filename) || filename.includes('..')) {
-            resolve(res.status(400).json({ error: 'Invalid filename' }))
+            resolve(new Response(JSON.stringify({ error: 'Invalid filename' }), { status: 400 }))
             return
           }
 
@@ -65,37 +55,35 @@ const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
           fs.writeFileSync(filePath, fileData)
           console.log(`File saved: ${filePath}, size: ${fileData.length} bytes`)
 
-          const protocol = req.headers['x-forwarded-proto'] || 'http'
-          const host = req.headers.host || 'localhost:3000'
+          const protocol = headers['x-forwarded-proto'] || 'http'
+          const host = headers.host || 'localhost:3000'
           const fileUrl = `${protocol}://${host}/api/files/${encodeURIComponent(savedFilename)}`
 
-          resolve(res.status(200).json({
+          resolve(new Response(JSON.stringify({
             success: true,
             filename: savedFilename,
             originalFilename: filename,
             url: fileUrl,
             message: 'File uploaded successfully',
             filePath: filePath
-          }))
+          }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
         })
       })
 
       bb.on('finish', () => {
-        resolve(res.status(400).json({ error: 'No file found in request' }))
+        resolve(new Response(JSON.stringify({ error: 'No file found in request' }), { status: 400 }))
       })
 
       bb.on('error', (err) => {
         console.error('Busboy error:', err)
-        reject(res.status(500).json({ error: 'Internal server error' }))
+        reject(new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 }))
       })
 
-      req.pipe(bb)
+      ;(request as any).body?.pipe(bb)
     })
     
   } catch (error) {
     console.error('Upload error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 })
   }
 }
-
-export default uploadHandler

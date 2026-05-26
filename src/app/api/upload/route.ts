@@ -44,7 +44,10 @@ export async function POST(request: Request) {
 
     const filePath = path.join(filesDir, savedFilename)
     fs.writeFileSync(filePath, fileBuffer)
-    console.log(`File saved: ${filePath}, size: ${fileBuffer.length} bytes`)
+    fs.chmodSync(filePath, 0o644) // 设置文件权限
+    console.log(`[UPLOAD] File saved: ${filePath}, size: ${fileBuffer.length} bytes`)
+    console.log(`[UPLOAD] Saved filename: "${savedFilename}"`)
+    console.log(`[UPLOAD] Directory contents after save:`, fs.readdirSync(filesDir))
 
     const headers = Object.fromEntries(request.headers)
     const protocol = headers['x-forwarded-proto'] || 'http'

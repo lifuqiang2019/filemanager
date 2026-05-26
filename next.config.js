@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['localhost', 'cdnfile.lengyuer.autos'],
+    domains: ['localhost', 'file.aoobooc.me'],
     remotePatterns: [
       {
         protocol: 'http',
@@ -12,8 +12,8 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'cdnfile.lengyuer.autos',
-        pathname: '/uploads/**',
+        hostname: 'file.aoobooc.me',
+        pathname: '/files/**',
       },
     ],
   },

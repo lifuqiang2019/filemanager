@@ -7,7 +7,7 @@ const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg']
 export default function Home() {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<{ success: boolean; message: string; url?: string; filename?: string } | null>(null)
+  const [result, setResult] = useState<{ success: boolean; message: string; url?: string; fileName?: string } | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -30,19 +30,22 @@ export default function Home() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch('/api/upload', {
+      const response = await fetch('https://fileshow.lengyuer.autos/api/external/upload', {
         method: 'POST',
+        headers: {
+          'x-api-key': 'ak_j8xr9qecnjvfwwao',
+        },
         body: formData,
       })
 
       const data = await response.json()
 
-      if (data.success) {
+      if (response.ok) {
         setResult({
           success: true,
-          message: data.message,
+          message: '上传成功',
           url: data.url,
-          filename: data.filename,
+          fileName: data.fileName,
         })
       } else {
         setResult({ success: false, message: data.error || '上传失败' })
@@ -86,7 +89,7 @@ export default function Home() {
               </a>
             </div>
           )}
-          {result.url && result.filename && isImage(result.filename) && (
+          {result.url && result.fileName && isImage(result.fileName) && (
             <div className="image-preview">
               <strong>图片预览:</strong>
               <br />
